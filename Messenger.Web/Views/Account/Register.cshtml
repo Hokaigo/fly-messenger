@@ -1,0 +1,43 @@
+﻿@model Messenger.Application.DTOs.Users.RegisterRequest
+
+@{
+    ViewData["Title"] = "Register";
+}
+
+<div class="d-flex justify-content-center align-items-center" style="height: 100%;">
+    <div class="card p-4" style="width: 500px;">
+        <h3 class="text-center mb-4">Register</h3>
+
+        <form method="post">
+            <div class="mb-3">
+                <label for="UserName" class="form-label">Username</label>
+                <input type="text" id="UserName" name="UserName" class="form-control" value="@Model.UserName" />
+                <span asp-validation-for="UserName" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label for="Email" class="form-label">Email</label>
+                <input type="email" id="Email" name="Email" class="form-control" value="@Model.Email" />
+                <span asp-validation-for="Email" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label for="Password" class="form-label">Password</label>
+                <input type="password" id="Password" name="Password" class="form-control" />
+                <span asp-validation-for="Password" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label for="ConfirmPassword" class="form-label">Confirm Password</label>
+                <input type="password" id="ConfirmPassword" name="ConfirmPassword" class="form-control" />
+                <span asp-validation-for="ConfirmPassword" class="text-danger"></span>
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100">Register</button>
+        </form>
+
+        <div class="text-center mt-3">
+            <p>Already registered? <a href="@Url.Action("Login", "Account")">Login here</a></p>
+        </div>
+    </div>
+</div>

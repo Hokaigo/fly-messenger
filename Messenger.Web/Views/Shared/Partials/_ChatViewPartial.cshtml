@@ -1,0 +1,52 @@
+﻿@model Messenger.Application.DTOs.Chats.MessageDto
+@using System.Security.Claims
+@using Messenger.Domain.Enums
+
+@{
+    var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+    var isOwn = Model.UserId.ToString() == currentUserId;
+    var isFile = Model.Type == MessageType.File && !string.IsNullOrEmpty(Model.FileUrl);
+    var isImage = isFile && Model.FileType.StartsWith("image/");
+    var isVideo = isFile && Model.FileType.StartsWith("video/");
+    var bubbleCls = "message-bubble" + ((isImage || isVideo) ? " file-image" : "");
+}
+
+<div class="message-wrapper @(isOwn ? "own" : "other")">
+    <div class="@bubbleCls">
+        <div class="message-username">@Model.UserName</div>
+
+        @if (!isFile)
+        {
+            <div class="message-text">@Model.Text</div>
+        }
+        else
+        {
+            @if (isImage)
+            {
+                <img src="@Model.FileUrl" alt="@Model.FileName" class="img-fluid mb-2" />
+            }
+            else if (isVideo)
+            {
+                <video controls class="img-fluid mb-2" style="max-height:50vh;">
+                    <source src="@Model.FileUrl" type="@Model.FileType" />
+                    Your browser does not support video format.
+                </video>
+            }
+            else
+            {
+                <div class="file-info mb-1">@Model.FileName</div>
+            }
+
+            <a href="@Model.FileUrl" download="@Model.FileName" class="btn btn-sm btn-outline-light mb-2">
+                Download
+            </a>
+
+            @if (!string.IsNullOrEmpty(Model.Text))
+            {
+                <div class="message-text">@Model.Text</div>
+            }
+        }
+
+        <div class="message-time">@Model.DateSent.ToString("HH:mm")</div>
+    </div>
+</div>

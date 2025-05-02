@@ -9,5 +9,7 @@ namespace Messenger.Domain.Repositories
         Task AddAsync(Chat chat);   
         Task UpdateAsync(Chat chat);
         Task DeleteAsync(Guid id);
+        Task<Chat?> GetPrivateChatBetweenUsersAsync(Guid user1Id, Guid user2Id);
+
     }
 }

@@ -16,7 +16,7 @@ namespace Messenger.Web.Controllers
         public IActionResult Login()
         {
             if (User.Identity != null && User.Identity.IsAuthenticated)
-                return RedirectToAction("Index", "Home"); 
+                return RedirectToAction("Index", "Chats"); 
 
             return View(new LoginRequest());
         }
@@ -48,7 +48,7 @@ namespace Messenger.Web.Controllers
                         ExpiresUtc = DateTimeOffset.UtcNow.AddHours(12)
                     });
 
-                return RedirectToAction("Index", "Home");
+                return RedirectToAction("Index", "Chats");
             }
             catch (Exception ex)
             {
@@ -61,7 +61,7 @@ namespace Messenger.Web.Controllers
         public IActionResult Register()
         {
             if (User.Identity != null && User.Identity.IsAuthenticated)
-                return RedirectToAction("Index", "Home");
+                return RedirectToAction("Index", "Chats");
 
             return View(new RegisterRequest());
         }

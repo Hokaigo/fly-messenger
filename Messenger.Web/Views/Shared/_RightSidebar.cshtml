@@ -1,0 +1,9 @@
+﻿@{
+    var currentPath = Context.Request.Path.Value.ToLower();
+}
+
+@if (!currentPath.Contains("/login") && !currentPath.Contains("/register"))
+{
+    <aside class="bg-dark p-4" style="width: 320px; min-height: calc(100vh - 80px); flex-shrink: 0;">
+    </aside>
+}

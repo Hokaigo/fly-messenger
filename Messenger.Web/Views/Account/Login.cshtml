@@ -1,23 +1,22 @@
 ﻿@model Messenger.Application.DTOs.Users.LoginRequest
-
 @{
     ViewData["Title"] = "Login";
 }
 
-<div class="d-flex justify-content-center align-items-center" style="height: 100%;">
-    <div class="card p-4" style="width: 500px;">
+<div class="auth-container">
+    <div class="card auth-card p-4" style="width: 400px;">
         <h3 class="text-center mb-4">Login</h3>
 
         <form method="post">
             <div class="mb-3">
-                <label for="Email" class="form-label">Email</label>
-                <input type="email" id="Email" name="Email" class="form-control" value="@Model.Email" />
+                <label asp-for="Email" class="form-label">Email</label>
+                <input asp-for="Email" class="form-control" />
                 <span asp-validation-for="Email" class="text-danger"></span>
             </div>
 
             <div class="mb-3">
-                <label for="Password" class="form-label">Password</label>
-                <input type="password" id="Password" name="Password" class="form-control" />
+                <label asp-for="Password" class="form-label">Password</label>
+                <input asp-for="Password" type="password" class="form-control" />
                 <span asp-validation-for="Password" class="text-danger"></span>
             </div>
 
@@ -25,7 +24,7 @@
         </form>
 
         <div class="text-center mt-3">
-            <p>Not registered? <a href="@Url.Action("Register", "Account")">Register here</a></p>
+            <p>Not registered? <a asp-action="Register" asp-controller="Account">Register here</a></p>
         </div>
     </div>
 </div>

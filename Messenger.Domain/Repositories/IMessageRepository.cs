@@ -7,5 +7,7 @@ namespace Messenger.Domain.Repositories
         Task<Message?> GetByIdAsync(Guid id);
         Task<IEnumerable<Message>> GetMessagesByChatIdAsync(Guid chatId);
         Task AddAsync(Message message);
+        Task UpdateAsync(Message message);
+        Task DeleteAsync(Guid id);
     }
 }

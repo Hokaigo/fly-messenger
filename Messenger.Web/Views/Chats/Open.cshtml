@@ -1,0 +1,91 @@
+﻿@model Messenger.Application.DTOs.Chats.ChatDto
+@using System.Security.Claims
+@using Messenger.Domain.Enums
+
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = ViewBag.OtherUserName ?? Model.Name;
+    var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+}
+
+<div class="chat-container">
+    <div class="chat-top-header text-white">
+        <h3 class="m-0">@ViewBag.OtherUserName</h3>
+    </div>
+
+    <div class="chat-messages">
+        @foreach (var m in Model.Messages.OrderBy(x => x.DateSent))
+        {
+            var isOwn = m.UserId.ToString() == currentUserId;
+            var isFile = m.Type == MessageType.File && !string.IsNullOrEmpty(m.FileUrl);
+            var isImage = isFile && m.FileType.StartsWith("image/");
+            var isVideo = isFile && m.FileType.StartsWith("video/");
+            var bubbleCls = "message-bubble" + ((isImage || isVideo) ? " file-image" : "");
+
+            <div class="message-wrapper @(isOwn ? "own" : "other")" data-message-id="@m.Id">
+                <div class="@bubbleCls">
+                    <div class="message-username">@m.UserName</div>
+
+                    @if (!isFile)
+                    {
+                        <div class="message-text">@m.Text</div>
+                    }
+                    else
+                    {
+                        @if (isImage)
+                        {
+                            <img src="@m.FileUrl" alt="@m.FileName" class="img-fluid mb-2" />
+                        }
+                        else if (isVideo)
+                        {
+                            <video controls class="img-fluid mb-2" style="max-height:50vh;">
+                                <source src="@m.FileUrl" type="@m.FileType" />
+                            </video>
+                        }
+                        else
+                        {
+                            <div class="file-info mb-1">@m.FileName</div>
+                        }
+                        <a href="@m.FileUrl" download="@m.FileName" class="btn btn-sm btn-outline-light mb-2">Download</a>
+                        @if (!string.IsNullOrEmpty(m.Text))
+                        {
+                            <div class="message-text">@m.Text</div>
+                        }
+                    }
+
+                    <div class="message-time">@m.DateSent.ToString("HH:mm")</div>
+                </div>
+            </div>
+        }
+    </div>
+
+    <div id="clientError" class="alert alert-danger d-none mx-3 mt-2"></div>
+
+    <form id="messageForm"
+          class="chat-form"
+          asp-controller="Chats"
+          asp-action="SendMessage"
+          asp-route-chatId="@Model.Id"
+          method="post"
+          enctype="multipart/form-data">
+        @Html.AntiForgeryToken()
+
+        <input type="hidden" id="chatId" name="chatId" value="@Model.Id" />
+
+        <input type="text" name="text"
+               class="form-control chat-input"
+               placeholder="Type your message…" autocomplete="off" />
+
+        <input type="file" name="file" id="fileInput" class="custom-file-input" />
+        <label for="fileInput" class="custom-file-label">Choose file</label>
+
+        <button type="submit" class="btn btn-primary">Send</button>
+    </form>
+
+
+</div>
+
+@section Scripts {
+    <script type="module" src="~/js/messageRenderer.js" asp-append-version="true"></script>
+    <script type="module" src="~/js/chat.js" asp-append-version="true"></script>
+}

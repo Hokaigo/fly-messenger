@@ -1,4 +1,5 @@
-﻿using Messenger.Application.DTOs.Users;
+﻿using Messenger.Application.DTOs.Chats;
+using Messenger.Application.DTOs.Users;
 using Messenger.Application.Services.Interfaces;
 using Messenger.Domain.Entities;
 using Messenger.Domain.Repositories;
@@ -10,6 +11,7 @@ namespace Messenger.Application.Services.Implementations
     public class UserService : IUserService
     {
         private readonly IUserRepository _repo;
+
         public UserService(IUserRepository repo) => _repo = repo;
 
         public async Task<LoginResponse> LoginAsync(LoginRequest request)
@@ -53,6 +55,19 @@ namespace Messenger.Application.Services.Implementations
         {
             var user = await _repo.GetByEmailAsync(email);
             return user != null;
+        }
+
+        public async Task<UserDto?> GetByIdAsync(Guid userId)
+        {
+            var user = await _repo.GetByIdAsync(userId); 
+            if (user == null) return null;
+
+            return new UserDto
+            {
+                Id = user.Id,
+                UserName = user.UserName,
+                Email = user.Email
+            };
         }
     }
 }

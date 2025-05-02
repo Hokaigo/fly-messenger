@@ -1,4 +1,4 @@
-wwwroot/lib/
+Messenger.Web/wwwroot/lib/
 
 bin/
 obj/
@@ -20,3 +20,5 @@ publish/
 
 **/appsettings*.json
 !**/appsettings.Development.json
+
+Messenger.Web/wwwroot/uploads

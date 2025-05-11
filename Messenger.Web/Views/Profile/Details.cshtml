@@ -1,0 +1,9 @@
+﻿@model Messenger.Application.DTOs.Profile.UserProfileDto
+
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "User Profile";
+    ViewBag.IsOwner = false;
+}
+
+@Html.Partial("Partials/_ProfileDetails", Model)

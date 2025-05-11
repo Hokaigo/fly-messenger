@@ -30,5 +30,16 @@ namespace Messenger.Infrastructure.Repositories
             _context.UserProfiles.Update(profile);
             await _context.SaveChangesAsync();
         }
+
+        public async Task DeleteByUserIdAsync(Guid userId)
+        {
+            var profile = await _context.UserProfiles.FirstOrDefaultAsync(up => up.UserId == userId);
+            if (profile != null)
+            {
+                _context.UserProfiles.Remove(profile);
+                await _context.SaveChangesAsync();
+            }
+        }
+
     }
 }

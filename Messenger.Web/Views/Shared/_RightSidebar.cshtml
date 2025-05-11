@@ -1,9 +1,71 @@
-﻿@{
-    var currentPath = Context.Request.Path.Value.ToLower();
+﻿@using Messenger.Application.DTOs.Profile
+@using System
+@using System.Linq
+@using System.Security.Claims
+@{
+    var currentPath = Context.Request.Path.Value?.ToLower() ?? "";
+    var showSidebar = currentPath.Contains("/chats/open");
+
+    var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+    Guid.TryParse(userIdString, out var me);
+
+    var participants = ViewBag.ChatParticipants as IEnumerable<UserProfileDto> ?? Enumerable.Empty<UserProfileDto>();
 }
 
 @if (!currentPath.Contains("/login") && !currentPath.Contains("/register"))
 {
-    <aside class="bg-dark p-4" style="width: 320px; min-height: calc(100vh - 80px); flex-shrink: 0;">
+    <aside class="bg-dark p-4 chat-participants-sidebar"
+           style="width:320px; min-height:calc(100vh - 80px); flex-shrink:0;">
+        @if (showSidebar && participants.Any())
+        {
+            <h5 class="text-white mb-3">Учасники чату</h5>
+            <ul class="list-unstyled">
+                @foreach (var u in participants)
+                {
+                    <li class="d-flex align-items-center mb-2 participant"
+                        data-user-id="@u.UserId">
+
+                        @if (!string.IsNullOrEmpty(u.ProfilePicUrl))
+                        {
+                            <img data-user-id="@u.UserId"
+                                 src="@(u.ProfilePicUrl)?v=@DateTime.UtcNow.Ticks"
+                                 class="rounded-circle me-2 participant-avatar"
+                                 style="width:32px;height:32px;" />
+                        }
+                        else
+                        {
+                            <div data-user-id="@u.UserId"
+                                 class="rounded-circle me-2 d-flex align-items-center justify-content-center avatar-placeholder"
+                                 style="width:32px;height:32px;background:#555;color:#fff;font-size:16px;">
+                                @u.UserName[0].ToString().ToUpper()
+                            </div>
+                        }
+
+                        @if (u.UserId == me)
+                        {
+                            <a asp-controller="Profile"
+                               asp-action="Index"
+                               class="text-white me-auto participant-name text-decoration-none">
+                                @u.UserName
+                            </a>
+                        }
+                        else
+                        {
+                            <a asp-controller="Profile"
+                               asp-action="Details"
+                               asp-route-id="@u.UserId"
+                               class="text-white me-auto participant-name text-decoration-none">
+                                @u.UserName
+                            </a>
+                        }
+
+                        <span class="participant-status ms-2"
+                              style="width:10px; height:10px; border-radius:50%; background:@(u.IsOnline ? "limegreen" : "gray");"
+                              title="@(u.IsOnline ? "Online" : "Offline")">
+                        </span>
+                    </li>
+                }
+            </ul>
+        }
     </aside>
 }

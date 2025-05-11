@@ -1,0 +1,53 @@
+﻿@model Messenger.Application.DTOs.Profile.UpdateProfileRequest
+
+@{
+    ViewData["Title"] = "Edit Profile";
+}
+
+<h2>@ViewData["Title"]</h2>
+
+<form asp-action="Edit" method="post" enctype="multipart/form-data" novalidate>
+    @Html.AntiForgeryToken()
+    <div class="mb-3">
+        <label asp-for="FirstName"></label>
+        <input asp-for="FirstName" class="form-control" value="@ViewBag.CurrentFirstName" />
+        <span asp-validation-for="FirstName" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="LastName"></label>
+        <input asp-for="LastName" class="form-control" value="@ViewBag.CurrentLastName" />
+        <span asp-validation-for="LastName" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label>Bio</label>
+        <textarea name="Bio"
+                  id="Bio"
+                  class="form-control">@ViewBag.CurrentBio</textarea>
+        <span asp-validation-for="Bio" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label>Current avatar</label>
+        <div class="mb-2">
+            @if (!string.IsNullOrEmpty((string)ViewBag.CurrentAvatar))
+            {
+                <img src="@ViewBag.CurrentAvatar?v=@DateTime.UtcNow.Ticks" class="rounded-circle" style="width:100px;height:100px" />
+            }
+            else
+            {
+                <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:100px;height:100px;background:#ccc;font-size:36px">
+                    @ViewBag.UserInitial
+                </div>
+            }
+        </div>
+
+        <label asp-for="Avatar">Download new avatar</label>
+        <input asp-for="Avatar" type="file" accept="image/*" class="form-control" />
+        <span asp-validation-for="Avatar" class="text-danger"></span>
+    </div>
+
+    <button type="submit" class="btn btn-success">Save changes</button>
+    <a asp-action="Index" class="btn btn-secondary">Cancel</a>
+</form>

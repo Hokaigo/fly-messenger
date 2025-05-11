@@ -125,8 +125,6 @@ header {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
-    /*scrollbar-width: none;*/
-    /*-ms-overflow-style: none;*/
     margin-bottom: 3.5rem;
 }
 
@@ -428,41 +426,35 @@ header {
 
 .chat-messages {
     overflow-y: auto;
-    /* Firefox: ховаємо трек, thumb робимо невидимим */
     scrollbar-width: thin;
     scrollbar-color: transparent transparent;
     transition: scrollbar-color 0.3s;
 }
 
-    /* Firefox: при ховері контейнера активуємо thumb */
     .chat-messages:hover {
         scrollbar-color: rgba(255,255,255,0.2) transparent;
     }
 
-    /* WebKit-браузери */
     .chat-messages::-webkit-scrollbar {
         width: 6px;
-        background: transparent; /* трек весь час прозорий */
+        background: transparent; 
     }
 
     .chat-messages::-webkit-scrollbar-track {
         background: transparent;
     }
 
-    /* сам “повзунок” (thumb) */
     .chat-messages::-webkit-scrollbar-thumb {
         background-color: rgba(255,255,255,0.2);
         border-radius: 3px;
-        opacity: 0; /* ховаємо до ховера */
+        opacity: 0; 
         transition: opacity 0.3s, background-color 0.3s;
     }
 
-    /* показуємо thumb при ховері контейнера */
     .chat-messages:hover::-webkit-scrollbar-thumb {
         opacity: 1;
     }
 
-    /* робимо його яскравішим, коли курсор безпосередньо на thumb */
     .chat-messages::-webkit-scrollbar-thumb:hover {
         background-color: rgba(255,255,255,0.4);
     }

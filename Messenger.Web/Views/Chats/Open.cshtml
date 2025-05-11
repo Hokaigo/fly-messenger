@@ -5,26 +5,69 @@
 @{
     Layout = "~/Views/Shared/_Layout.cshtml";
     ViewData["Title"] = ViewBag.OtherUserName ?? Model.Name;
-    var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+    var currentUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+    var other = Model.Members.First(m => m.Id != currentUserId);
 }
 
 <div class="chat-container">
-    <div class="chat-top-header text-white">
-        <h3 class="m-0">@ViewBag.OtherUserName</h3>
+    <div class="chat-top-header text-white d-flex align-items-center">
+        @if (!string.IsNullOrEmpty((string?)ViewBag.OtherUserAvatar))
+        {
+            <img data-user-id="@other.Id"
+                 id="otherAvatar"
+                 src="@(ViewBag.OtherUserAvatar)?v=@DateTime.UtcNow.Ticks"
+                 class="rounded-circle me-2"
+                 style="width:40px;height:40px;" />
+        }
+        else
+        {
+            <div data-user-id="@other.Id"
+                 class="rounded-circle d-flex align-items-center justify-content-center me-2 avatar-placeholder"
+                 style="width:40px;height:40px;background:#ccc;font-size:18px;color:#fff;">
+                @ViewBag.UserInitial
+            </div>
+        }
+
+        <h3 class="m-0">
+            <a asp-controller="Profile"
+               asp-action="Details"
+               asp-route-id="@other.Id"
+               class="text-white text-decoration-none">
+                @ViewBag.OtherUserName
+            </a>
+        </h3>
     </div>
+
 
     <div class="chat-messages">
         @foreach (var m in Model.Messages.OrderBy(x => x.DateSent))
         {
-            var isOwn = m.UserId.ToString() == currentUserId;
+            var isOwn = m.UserId == currentUserId;
             var isFile = m.Type == MessageType.File && !string.IsNullOrEmpty(m.FileUrl);
             var isImage = isFile && m.FileType.StartsWith("image/");
             var isVideo = isFile && m.FileType.StartsWith("video/");
             var bubbleCls = "message-bubble" + ((isImage || isVideo) ? " file-image" : "");
 
-            <div class="message-wrapper @(isOwn ? "own" : "other")" data-message-id="@m.Id">
+            <div class="message-wrapper @(isOwn ? "own" : "other")"
+                 data-message-id="@m.Id">
                 <div class="@bubbleCls">
-                    <div class="message-username">@m.UserName</div>
+                    <div class="message-username">
+                        @if (!isOwn)
+                        {
+                            <a asp-controller="Profile"
+                               asp-action="Details"
+                               asp-route-id="@m.UserId"
+                               class="text-decoration-none"
+                               style="color: inherit;">
+                                @m.UserName
+                            </a>
+                        }
+                        else
+                        {
+                            <span>@m.UserName</span>
+                        }
+                    </div>
 
                     @if (!isFile)
                     {
@@ -34,26 +77,36 @@
                     {
                         @if (isImage)
                         {
-                            <img src="@m.FileUrl" alt="@m.FileName" class="img-fluid mb-2" />
+                            <img src="@m.FileUrl" alt="@m.FileName"
+                                 class="img-fluid mb-2" />
                         }
                         else if (isVideo)
                         {
-                            <video controls class="img-fluid mb-2" style="max-height:50vh;">
-                                <source src="@m.FileUrl" type="@m.FileType" />
+                            <video controls class="img-fluid mb-2"
+                                   style="max-height:50vh;">
+                                <source src="@m.FileUrl"
+                                        type="@m.FileType" />
                             </video>
                         }
                         else
                         {
                             <div class="file-info mb-1">@m.FileName</div>
                         }
-                        <a href="@m.FileUrl" download="@m.FileName" class="btn btn-sm btn-outline-light mb-2">Download</a>
+
+                        <a href="@m.FileUrl" download="@m.FileName"
+                           class="btn btn-sm btn-outline-light mb-2">
+                            Download
+                        </a>
+
                         @if (!string.IsNullOrEmpty(m.Text))
                         {
                             <div class="message-text">@m.Text</div>
                         }
                     }
 
-                    <div class="message-time">@m.DateSent.ToString("HH:mm")</div>
+                    <div class="message-time">
+                        @m.DateSent.ToString("HH:mm")
+                    </div>
                 </div>
             </div>
         }
@@ -76,13 +129,14 @@
                class="form-control chat-input"
                placeholder="Type your message…" autocomplete="off" />
 
-        <input type="file" name="file" id="fileInput" class="custom-file-input" />
-        <label for="fileInput" class="custom-file-label">Choose file</label>
+        <input type="file" name="file" id="fileInput"
+               class="custom-file-input" />
+        <label for="fileInput" class="custom-file-label">
+            Choose file
+        </label>
 
         <button type="submit" class="btn btn-primary">Send</button>
     </form>
-
-
 </div>
 
 @section Scripts {

@@ -23,7 +23,12 @@
 
     const header = document.createElement("div");
     header.className = "message-username";
-    header.textContent = userName;
+    const link = document.createElement("a");
+    link.href = `/Profile/Details/${userId}`;
+    link.textContent = userName;
+    link.style.color = "inherit";
+    link.style.textDecoration = "none";
+    header.appendChild(link);
     bubble.appendChild(header);
 
     if (isFile) {
@@ -45,12 +50,13 @@
             info.textContent = fileName;
             bubble.appendChild(info);
         }
-        const link = document.createElement("a");
-        link.href = fileUrl;
-        link.download = fileName;
-        link.className = "btn btn-sm btn-outline-light mb-2";
-        link.textContent = "Download";
-        bubble.appendChild(link);
+        const downloadLink = document.createElement("a");
+        downloadLink.href = fileUrl;
+        downloadLink.download = fileName;
+        downloadLink.className = "btn btn-sm btn-outline-light mb-2";
+        downloadLink.textContent = "Download";
+        bubble.appendChild(downloadLink);
+
         if (text) {
             const txtDiv = document.createElement("div");
             txtDiv.className = "message-text";

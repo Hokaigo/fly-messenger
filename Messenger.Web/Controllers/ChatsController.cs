@@ -1,5 +1,7 @@
 ﻿using Messenger.Application.DTOs.Chats;
 using Messenger.Application.DTOs.Profile;
+using Messenger.Application.MessageProcessing.interfaces;
+using Messenger.Application.MessageProcessing.validation;
 using Messenger.Application.Services.Interfaces;
 using Messenger.CrossCutting.Services;
 using Messenger.Web.Hubs;
@@ -18,15 +20,18 @@ namespace Messenger.Web.Controllers
         private readonly IMessageService _msgService;
         private readonly IUserService _userService;
         private readonly IProfileService _profileService;
+
         private readonly IHubContext<ChatHub> _chatHub;
         private readonly IHubContext<ChatListHub> _chatListHub;
+
         private readonly IOnlineUserTracker _tracker;
 
-        private const long FILE_SIZE_LIMIT = 15 * 1024 * 1024;
-        private static readonly string[] ALLOWED_EXT = { ".png", ".jpg", ".jpeg", ".gif", ".pdf", ".docx", ".mp4", ".mp3" };
+        private readonly ITextMessageHandler _textHandler;
+        private readonly IFileMessageHandler _fileHandler;
 
-        public ChatsController(IChatService chatService, IMessageService msgService,  IHubContext<ChatHub> chatHub, IHubContext<ChatListHub> chatListHub,
-            IUserService userService, IProfileService profileService, IOnlineUserTracker tracker)
+        public ChatsController(IChatService chatService, IMessageService msgService, IHubContext<ChatHub> chatHub, IHubContext<ChatListHub> chatListHub,
+            IUserService userService, IProfileService profileService, IOnlineUserTracker tracker, ITextMessageHandler textHandler,
+            IFileMessageHandler fileHandler)
         {
             _chatService = chatService;
             _msgService = msgService;
@@ -35,6 +40,8 @@ namespace Messenger.Web.Controllers
             _userService = userService;
             _profileService = profileService;
             _tracker = tracker;
+            _textHandler = textHandler;
+            _fileHandler = fileHandler;
         }
 
         public async Task<IActionResult> Index()
@@ -94,19 +101,27 @@ namespace Messenger.Web.Controllers
             return View(chat);
         }
 
-
         [HttpPost, ValidateAntiForgeryToken]
         public async Task<IActionResult> SendMessage(Guid chatId, string? text, IFormFile? file)
         {
             if (chatId == Guid.Empty)
-                return BadRequest("An error occurred while sending the message.");
+                return BadRequest(new { error = "An error occurred while sending a message." });
 
-            if (!ValidateFile(file, out var fileError))
+            IMessageHandler handler = (file != null && file.Length > 0) ? _fileHandler : _textHandler;
+
+            MessageDto dto;
+            try
             {
-                return BadRequest(fileError);
+                dto = await handler.ProcessAsync(chatId, GetUserId(), text, file);
             }
-
-            var dto = await _msgService.SendMessageAsync(chatId, GetUserId(), text, file);
+            catch (InvalidMessageException mex)
+            {
+                return BadRequest(new { error = mex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = "Server error occurred" });
+            }
 
             await BroadcastMessage(dto, chatId);
             return Ok();
@@ -186,27 +201,6 @@ namespace Messenger.Web.Controllers
 
         private Guid GetUserId() => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
-        private bool ValidateFile(IFormFile? file, out string error)
-        {
-            error = string.Empty;
-            if (file == null) return true;
-
-            var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
-            var allowedList = string.Join(", ", ALLOWED_EXT);
-
-            if (!ALLOWED_EXT.Contains(ext))
-            {
-                error = $"File extension \"{ext}\" is not supported (allowed: {allowedList})";
-                return false;
-            }
-            if (file.Length > FILE_SIZE_LIMIT)
-            {
-                error = $"File too large (maximum {FILE_SIZE_LIMIT / (1024 * 1024)} MB).";
-                return false;
-            }
-            return true;
-        }
-
         private async Task BroadcastMessage(MessageDto dto, Guid chatId)
         {
             var me = GetUserId();
@@ -220,8 +214,7 @@ namespace Messenger.Web.Controllers
             if (otherUser != null)
             {
                 var summaryForOther = await _chatService.GetChatSummaryAsync(chatId, otherUser.Id);
-                await _chatListHub.Clients.Group(otherUser.Id.ToString())
-                    .SendAsync("ChatListUpdated", summaryForOther);
+                await _chatListHub.Clients.Group(otherUser.Id.ToString()).SendAsync("ChatListUpdated", summaryForOther);
             }
         }
 

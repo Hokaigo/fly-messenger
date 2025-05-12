@@ -462,3 +462,64 @@ header {
 .chat-top-header{
     padding: 1rem 1rem 2.5rem 1rem;
 }
+
+.chat-list-wrapper {
+    max-height: calc(140.19px * 4);
+    overflow-y: auto;
+    border-radius: 8px;
+    background-color: #2c2f35;
+    padding: 0.5rem;
+}
+
+.chat-list {
+    padding: 0;
+    margin: 0;
+}
+
+    .chat-list > li {
+        background-color: #3b3f45;
+        border-radius: 0.5rem;
+        padding: 1rem;
+        list-style: none;
+        margin-bottom: 0.5rem;
+        box-sizing: border-box;
+    }
+
+        .chat-list > li:last-child {
+            margin-bottom: 0;
+        }
+
+.chat-link-custom {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+}
+
+.chat-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.chat-username {
+    font-weight: bold;
+    font-size: 1.1rem;
+    color: #fff;
+}
+
+.chat-time {
+    font-size: 0.9rem;
+    color: #aaa;
+}
+
+.chat-preview {
+    margin-top: 0.5rem;
+    font-size: 0.95rem;
+    color: #ccc;
+    word-wrap: break-word;
+}
+
+.chat-unread-message{
+    color: white;
+    font-style: italic;
+}

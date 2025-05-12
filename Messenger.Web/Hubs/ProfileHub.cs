@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.SignalR;
 using System.Security.Claims;
-using System.Text.RegularExpressions;
 
 public class ProfileHub : Hub
 {

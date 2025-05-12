@@ -1,129 +1,119 @@
-﻿using Messenger.Application.DTOs.Chats;
+﻿using AutoMapper;
+using Messenger.Application.DTOs.Chats;
+using Messenger.Application.Services.Interfaces;
 using Messenger.Domain.Entities;
 using Messenger.Domain.Repositories;
-using Messenger.Domain.Enums;
-using Messenger.Application.Services.Interfaces;
 
-public class ChatService : IChatService
+namespace Messenger.Application.Services.Implementations
 {
-    private readonly IChatRepository _chatRepo;
-    private readonly IUserRepository _userRepo;
-    private readonly IMessageRepository _messageRepo;
-
-    public ChatService(IChatRepository chatRepo, IUserRepository userRepo, IMessageRepository messageRepo)
+    public class ChatService : IChatService
     {
-        _chatRepo = chatRepo;
-        _userRepo = userRepo;
-        _messageRepo = messageRepo;
-    }
+        private readonly IChatRepository _chatRepo;
+        private readonly IUserRepository _userRepo;
+        private readonly IMessageRepository _messageRepo;
+        private readonly IMapper _mapper;
 
-    public async Task<ChatDto> SearchOrCreatePrivateChatAsync(Guid currentUserId, Guid targetUserId)
-    {
-        var existing = await _chatRepo.GetPrivateChatBetweenUsersAsync(currentUserId, targetUserId);
-        if (existing != null)
+        public ChatService(IChatRepository chatRepo, IUserRepository userRepo, IMessageRepository messageRepo, IMapper mapper)
         {
-            var existingChat = await _chatRepo.GetByIdAsync(existing.Id);
-            return MapToChatDto(existingChat);
+            _chatRepo = chatRepo;
+            _userRepo = userRepo;
+            _messageRepo = messageRepo;
+            _mapper = mapper;
         }
 
-        var thisUser = await _userRepo.GetByIdAsync(currentUserId) ?? throw new InvalidOperationException("Current user not found");
-        var otherUser = await _userRepo.GetByIdAsync(targetUserId) ?? throw new InvalidOperationException("Target user not found");
-
-        var chat = new Chat
+        public async Task<ChatDto> SearchOrCreatePrivateChatAsync(Guid currentUserId, Guid targetUserId)
         {
-            Name = $"{thisUser.UserName}/{otherUser.UserName}",
-            Type = ChatType.Private,
-            Members = new List<User> { thisUser, otherUser }
-        };
-
-        await _chatRepo.AddAsync(chat);
-
-        return MapToChatDto(chat);
-    }
-
-    public async Task<ChatDto?> GetChatByIdAsync(Guid chatId)
-    {
-        var chat = await _chatRepo.GetByIdAsync(chatId);
-        if (chat == null) return null;
-
-        var msgs = await _messageRepo.GetMessagesByChatIdAsync(chatId);
-        chat.Messages = msgs.ToList();
-
-        return MapToChatDto(chat);
-    }
-
-    private ChatDto MapToChatDto(Chat c)
-    {
-        return new ChatDto
-        {
-            Id = c.Id,
-            Name = c.Name,
-            Type = c.Type,
-            Members = c.Members
-                         .Select(u => new UserDto { Id = u.Id, UserName = u.UserName, Email = u.Email })
-                         .ToList(),
-            Messages = c.Messages.OrderBy(m => m.DateSent)
-                         .Select(m => new MessageDto
-                         {
-                             Id = m.Id,
-                             ChatId = m.ChatId,
-                             UserId = m.UserId,
-                             UserName = m.User.UserName,
-                             DateSent = m.DateSent,
-                             Type = m.Type,
-                             Text = m.Text,
-                             FileUrl = m.FileUrl,
-                             FileName = m.FileName,
-                             FileType = m.FileType,
-                             FileSize = m.FileSize
-                         }).ToList()
-        };
-    }
-
-
-    public async Task<List<ChatSummaryDto>> GetChatSummariesAsync(Guid currentUserId)
-    {
-        var chats = await _chatRepo.GetUserChatsAsync(currentUserId);
-        var summaries = new List<ChatSummaryDto>();
-
-        foreach (var chat in chats)
-        {
-            var other = chat.Members.First(m => m.Id != currentUserId);
-            var otherUserName = other.UserName;
-
-            var allMsgs = (await _messageRepo.GetMessagesByChatIdAsync(chat.Id)).OrderBy(m => m.DateSent);
-            var lastMsg = allMsgs.LastOrDefault();
-
-            summaries.Add(new ChatSummaryDto
+            var existing = await _chatRepo.GetPrivateChatBetweenUsersAsync(currentUserId, targetUserId);
+            if (existing != null)
             {
-                ChatId = chat.Id,
-                OtherUserName = otherUserName,
-                LastMessage = lastMsg?.Text,
-                LastMessageTime = lastMsg?.DateSent
-            });
+                var full = await _chatRepo.GetByIdAsync(existing.Id);
+                return _mapper.Map<ChatDto>(full);
+            }
+
+            var thisUser = await _userRepo.GetByIdAsync(currentUserId) ?? throw new InvalidOperationException("Current user not found");
+            var otherUser = await _userRepo.GetByIdAsync(targetUserId) ?? throw new InvalidOperationException("Target user not found");
+
+            var chat = new Chat
+            {
+                Name = $"{thisUser.UserName}/{otherUser.UserName}",
+                Type = Domain.Enums.ChatType.Private,
+                Members = new List<User> { thisUser, otherUser }
+            };
+
+            await _chatRepo.AddAsync(chat);
+            return _mapper.Map<ChatDto>(chat);
         }
 
-        return summaries.OrderByDescending(x => x.LastMessageTime ?? DateTime.MinValue).ToList();
-    }
-
-
-    public async Task<ChatSummaryDto?> GetChatSummaryAsync(Guid chatId, Guid userId)
-    {
-        var chat = await _chatRepo.GetByIdAsync(chatId);
-        if (chat == null || !chat.Members.Any(m => m.Id == userId))
-            return null;
-
-        var other = chat.Members.FirstOrDefault(m => m.Id != userId);
-        var otherUserName = other?.UserName ?? "Unknown User";
-
-        var lastMsg = (await _messageRepo.GetMessagesByChatIdAsync(chatId)).OrderByDescending(m => m.DateSent).FirstOrDefault();
-
-        return new ChatSummaryDto
+        public async Task<ChatDto?> GetChatByIdAsync(Guid chatId)
         {
-            ChatId = chat.Id,
-            OtherUserName = otherUserName,
-            LastMessage = lastMsg?.Text,
-            LastMessageTime = lastMsg?.DateSent
-        };
+            var chat = await _chatRepo.GetByIdAsync(chatId);
+            if (chat == null) return null;
+
+            var msgs = await _messageRepo.GetMessagesByChatIdAsync(chatId);
+            chat.Messages = msgs.ToList();
+            return _mapper.Map<ChatDto>(chat);
+        }
+
+        public async Task<List<ChatSummaryDto>> GetChatSummariesAsync(Guid currentUserId)
+        {
+            var chats = await _chatRepo.GetUserChatsAsync(currentUserId);
+            var dtos = new List<ChatSummaryDto>();
+
+            foreach (var chat in chats)
+            {
+                var otherUser = chat.Members.FirstOrDefault(m => m.Id != currentUserId);
+                if (otherUser == null)
+                    continue;
+
+                var dto = new ChatSummaryDto
+                {
+                    ChatId = chat.Id,
+                    OtherUserName = otherUser.UserName
+                };
+
+                var messages = await _messageRepo.GetMessagesByChatIdAsync(chat.Id);
+                var lastMessage = messages
+                    .OrderByDescending(m => m.DateSent)
+                    .FirstOrDefault();
+
+                if (lastMessage != null)
+                {
+                    dto.LastMessage = lastMessage.Text;
+                    dto.LastMessageTime = lastMessage.DateSent;
+                }
+
+                dtos.Add(dto);
+            }
+
+            return dtos
+               .OrderByDescending(d => d.LastMessageTime ?? DateTime.MinValue)
+               .ToList();
+        }
+
+
+
+        public async Task<ChatSummaryDto?> GetChatSummaryAsync(Guid chatId, Guid userId)
+        {
+            var chat = await _chatRepo.GetByIdAsync(chatId);
+            if (chat == null || !chat.Members.Any(m => m.Id == userId))
+                return null;
+
+            var dto = _mapper.Map<ChatSummaryDto>(chat);
+            var other = chat.Members.First(m => m.Id != userId);
+            dto.OtherUserName = other.UserName;
+
+            var last = (await _messageRepo.GetMessagesByChatIdAsync(chatId))
+                .OrderByDescending(m => m.DateSent)
+                .FirstOrDefault();
+
+            if (last != null)
+            {
+                dto.LastMessage = last.Text;
+                dto.LastMessageTime = last.DateSent;
+            }
+
+            return dto;
+        }
+
     }
 }

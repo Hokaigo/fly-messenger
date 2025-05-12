@@ -25,7 +25,7 @@ namespace Messenger.Web.Controllers
         private const long FILE_SIZE_LIMIT = 15 * 1024 * 1024;
         private static readonly string[] ALLOWED_EXT = { ".png", ".jpg", ".jpeg", ".gif", ".pdf", ".docx", ".mp4", ".mp3" };
 
-        public ChatsController(IChatService chatService, IMessageService msgService, IHubContext<ChatHub> chatHub, IHubContext<ChatListHub> chatListHub,
+        public ChatsController(IChatService chatService, IMessageService msgService,  IHubContext<ChatHub> chatHub, IHubContext<ChatListHub> chatListHub,
             IUserService userService, IProfileService profileService, IOnlineUserTracker tracker)
         {
             _chatService = chatService;
@@ -41,29 +41,35 @@ namespace Messenger.Web.Controllers
         {
             var me = GetUserId();
             var summaries = await _chatService.GetChatSummariesAsync(me);
-            var nonEmpty = summaries.Where(s => s.LastMessageTime.HasValue).ToList();
+            var nonEmpty = summaries
+             .Select(s => new ChatListItemViewModel
+             {
+                 ChatId = s.ChatId,
+                 OtherUserName = s.OtherUserName,
+                 LastMessage = s.LastMessage,
+                 LastMessageTime = s.LastMessageTime
+             })
+             .ToList();
 
-            var vm = new ChatsViewModel
-            {
-                Chats = nonEmpty.Select(s => new ChatListItemViewModel
-                {
-                    ChatId = s.ChatId,
-                    OtherUserName = s.OtherUserName,
-                    LastMessage = s.LastMessage,
-                    LastMessageTime = s.LastMessageTime
-                }).ToList()
-            };
-            return View(vm);
+
+            return View(new ChatsViewModel { Chats = nonEmpty });
         }
 
         public async Task<IActionResult> Open(Guid chatId)
         {
             var me = GetUserId();
             var chat = await _chatService.GetChatByIdAsync(chatId);
+
             if (chat == null) return NotFound();
             if (!chat.Members.Any(m => m.Id == me)) return Forbid();
 
-            var otherUser = chat.Members.First(m => m.Id != me);
+            var otherUser = chat.Members.FirstOrDefault(m => m.Id != me);
+            if (otherUser == null)
+            {
+                TempData["ErrorMessage"] = "The other participant in this chat has been removed.";
+                return RedirectToAction("Index");
+            }
+
             var otherProfile = await _profileService.GetByUserIdAsync(otherUser.Id);
 
             ViewBag.OtherUserName = otherUser.UserName;
@@ -88,6 +94,7 @@ namespace Messenger.Web.Controllers
             return View(chat);
         }
 
+
         [HttpPost, ValidateAntiForgeryToken]
         public async Task<IActionResult> SendMessage(Guid chatId, string? text, IFormFile? file)
         {
@@ -96,14 +103,15 @@ namespace Messenger.Web.Controllers
 
             if (!ValidateFile(file, out var fileError))
             {
-                TempData["UploadError"] = fileError;
-                return RedirectToAction("Open", new { chatId });
+                return BadRequest(fileError);
             }
 
             var dto = await _msgService.SendMessageAsync(chatId, GetUserId(), text, file);
+
             await BroadcastMessage(dto, chatId);
             return Ok();
         }
+
 
         [HttpPost, ValidateAntiForgeryToken]
         public async Task<IActionResult> EditMessage(Guid messageId, string newText)
@@ -111,8 +119,7 @@ namespace Messenger.Web.Controllers
             try
             {
                 var dto = await _msgService.EditMessageAsync(messageId, newText);
-                await _chatHub.Clients.Group(dto.ChatId.ToString())
-                                      .SendAsync("MessageEdited", dto);
+                await _chatHub.Clients.Group(dto.ChatId.ToString()).SendAsync("MessageEdited", dto);
                 return Ok(dto);
             }
             catch (KeyNotFoundException)
@@ -127,8 +134,7 @@ namespace Messenger.Web.Controllers
             try
             {
                 var chatId = await _msgService.DeleteMessageAsync(messageId);
-                await _chatHub.Clients.Group(chatId.ToString())
-                                      .SendAsync("MessageDeleted", messageId);
+                await _chatHub.Clients.Group(chatId.ToString()).SendAsync("MessageDeleted", messageId);
                 return Ok();
             }
             catch (KeyNotFoundException)
@@ -157,23 +163,25 @@ namespace Messenger.Web.Controllers
             }
 
             if (!ModelState.IsValid)
-            {
-                var summaries = await _chatService.GetChatSummariesAsync(me);
-                var nonEmpty = summaries.Where(s => s.LastMessageTime.HasValue).ToList();
-
-                model.Chats = nonEmpty.Select(s => new ChatListItemViewModel
-                {
-                    ChatId = s.ChatId,
-                    OtherUserName = s.OtherUserName,
-                    LastMessage = s.LastMessage,
-                    LastMessageTime = s.LastMessageTime
-                }).ToList();
-
-                return View("Index", model);
-            }
+                return await IndexWithModel(me, model);
 
             var chatDto = await _chatService.SearchOrCreatePrivateChatAsync(me, targetId);
             return RedirectToAction("Open", new { chatId = chatDto.Id });
+        }
+
+        private async Task<IActionResult> IndexWithModel(Guid me, ChatsViewModel model)
+        {
+            var summaries = await _chatService.GetChatSummariesAsync(me);
+            model.Chats = summaries
+                  .Select(s => new ChatListItemViewModel
+                  {
+                      ChatId = s.ChatId,
+                      OtherUserName = s.OtherUserName,
+                      LastMessage = s.LastMessage,
+                      LastMessageTime = s.LastMessageTime
+                  })
+                  .ToList();
+            return View("Index", model);
         }
 
         private Guid GetUserId() => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
@@ -191,13 +199,11 @@ namespace Messenger.Web.Controllers
                 error = $"File extension \"{ext}\" is not supported (allowed: {allowedList})";
                 return false;
             }
-
             if (file.Length > FILE_SIZE_LIMIT)
             {
                 error = $"File too large (maximum {FILE_SIZE_LIMIT / (1024 * 1024)} MB).";
                 return false;
             }
-
             return true;
         }
 
@@ -207,16 +213,17 @@ namespace Messenger.Web.Controllers
 
             await _chatHub.Clients.Group(chatId.ToString()).SendAsync("ReceiveMessage", dto);
 
-            var summary = await _chatService.GetChatSummaryAsync(chatId, me);
-
-            await _chatListHub.Clients.Group(me.ToString()).SendAsync("ChatListUpdated", summary);
+            var summaryForMe = await _chatService.GetChatSummaryAsync(chatId, me);
+            await _chatListHub.Clients.Group(me.ToString()).SendAsync("ChatListUpdated", summaryForMe);
 
             var otherUser = (await _chatService.GetChatByIdAsync(chatId)).Members.FirstOrDefault(m => m.Id != me);
-
             if (otherUser != null)
             {
-                await _chatListHub.Clients.Group(otherUser.Id.ToString()).SendAsync("ChatListUpdated", summary);
+                var summaryForOther = await _chatService.GetChatSummaryAsync(chatId, otherUser.Id);
+                await _chatListHub.Clients.Group(otherUser.Id.ToString())
+                    .SendAsync("ChatListUpdated", summaryForOther);
             }
         }
+
     }
 }

@@ -18,7 +18,7 @@
            style="width:320px; min-height:calc(100vh - 80px); flex-shrink:0;">
         @if (showSidebar && participants.Any())
         {
-            <h5 class="text-white mb-3">Учасники чату</h5>
+            <h5 class="text-white mb-3">Chat Participants</h5>
             <ul class="list-unstyled">
                 @foreach (var u in participants)
                 {
@@ -36,7 +36,7 @@
                         {
                             <div data-user-id="@u.UserId"
                                  class="rounded-circle me-2 d-flex align-items-center justify-content-center avatar-placeholder"
-                                 style="width:32px;height:32px;background:#555;color:#fff;font-size:16px;">
+                                 style="width:32px;height:32px;background:#ccc;color:#fff;font-size:16px;">
                                 @u.UserName[0].ToString().ToUpper()
                             </div>
                         }

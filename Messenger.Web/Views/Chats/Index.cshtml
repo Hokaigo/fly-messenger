@@ -18,30 +18,36 @@
 
     <div class="chats-list-card">
         <h5 class="chats-list-title">Available Chats</h5>
-        <ul class="chat-list list-group list-group-flush">
-            @foreach (var chat in Model.Chats)
-            {
-                <li class="list-group-item p-0" data-chat-id="@chat.ChatId">
-                    <a asp-action="Open"
-                       asp-route-chatId="@chat.ChatId"
-                       class="chat-link-custom">
-                        <div class="chat-header">
-                            <span class="chat-username">@chat.OtherUserName</span>
-                            @if (chat.LastMessageTime != null)
-                            {
-                                <span class="chat-time">@chat.LastMessageTime.Value.ToString("HH:mm")</span>
-                            }
-                        </div>
-                        @if (!string.IsNullOrEmpty(chat.LastMessage))
-                        {
-                            <div class="chat-preview">
-                                @chat.LastMessage
+
+        <div class="chat-list-wrapper chat-messages">
+            <ul class="chat-list list-group list-group-flush">
+                @foreach (var chat in Model.Chats)
+                {
+                    <li class="list-group-item p-0" data-chat-id="@chat.ChatId">
+                        <a asp-action="Open"
+                           asp-route-chatId="@chat.ChatId"
+                           class="chat-link-custom">
+                            <div class="chat-header">
+                                <span class="chat-username">@chat.OtherUserName</span>
+                                @if (chat.LastMessageTime != null)
+                                {
+                                    <span class="chat-time">
+                                        @chat.LastMessageTime.Value.ToString("HH:mm")
+                                    </span>
+                                }
                             </div>
-                        }
-                    </a>
-                </li>
-            }
-        </ul>
+                            @if (!string.IsNullOrEmpty(chat.LastMessage))
+                            {
+                                <div class="chat-preview">
+                                    @chat.LastMessage
+                                </div>
+                            }
+                        </a>
+                    </li>
+                }
+            </ul>
+        </div>
     </div>
+
 </div>
 

@@ -1,14 +1,18 @@
+using Messenger.Application.Mappings;
 using Messenger.Application.Services.Implementations;
 using Messenger.Application.Services.Interfaces;
 using Messenger.CrossCutting.Services;
 using Messenger.Domain.Repositories;
 using Messenger.Infrastructure.Persistence;
 using Messenger.Infrastructure.Repositories;
+using Messenger.Infrastructure.Services;
 using Messenger.Web.Hubs;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddAutoMapper(typeof(MappingProfile).Assembly);
 
 builder.WebHost.ConfigureKestrel(options =>
 {
@@ -28,7 +32,11 @@ builder.Services.AddScoped<IMessageService, MessageService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IChatService, ChatService>();
 builder.Services.AddScoped<IProfileService, ProfileService>();
+builder.Services.AddScoped<IFileStorageService, FileStorageService>();
+
 builder.Services.AddSingleton<IOnlineUserTracker, OnlineUserTracker>();
+
+
 
 builder.Services
     .AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
@@ -80,6 +88,6 @@ app.MapControllerRoute(
 app.MapHub<ChatHub>("/hubs/chat");
 app.MapHub<ChatListHub>("/hubs/chatList");
 app.MapHub<ProfileHub>("/hubs/profile");
-app.MapHub<UserStateHub>("/hubs/userState");
+app.MapHub<UserStateHub>("/hubs/userState").RequireAuthorization();
 
 app.Run();

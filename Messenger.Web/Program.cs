@@ -1,6 +1,7 @@
 using Messenger.Application.Mappings;
 using Messenger.Application.MessageProcessing.handlers;
 using Messenger.Application.MessageProcessing.interfaces;
+using Messenger.Application.Services.Factories;
 using Messenger.Application.Services.Implementations;
 using Messenger.Application.Services.Interfaces;
 using Messenger.CrossCutting.Services;
@@ -28,6 +29,8 @@ builder.Services.AddSignalR();
 
 builder.Services.AddTransient<ITextMessageHandler, TextMessageHandler>();
 builder.Services.AddTransient<IFileMessageHandler, FileMessageHandler>();
+
+builder.Services.AddScoped<IChatFactory, ChatFactory>();
 
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IChatRepository, ChatRepository>();

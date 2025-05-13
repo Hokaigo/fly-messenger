@@ -8,6 +8,5 @@ namespace Messenger.Application.Services.Interfaces
         Task<ChatDto?> GetChatByIdAsync (Guid chatId);
         Task<List<ChatSummaryDto>> GetChatSummariesAsync(Guid currentUserId);
         Task<ChatSummaryDto?> GetChatSummaryAsync(Guid chatId, Guid userId);
-
     }
 }

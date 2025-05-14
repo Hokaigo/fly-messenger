@@ -10,18 +10,18 @@ namespace Messenger.Web.Controllers
     public class AccountController : Controller
     {
         private readonly IUserService _userService;
-        public AccountController(IUserService userService) =>_userService = userService;
+        public AccountController(IUserService userService) => _userService = userService;
 
         [HttpGet]
         public IActionResult Login()
         {
-            if (User.Identity != null && User.Identity.IsAuthenticated)
-                return RedirectToAction("Index", "Chats"); 
-
+            if (User.Identity?.IsAuthenticated == true)
+                return RedirectToAction("Index", "Chats");
             return View(new LoginRequest());
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Login(LoginRequest request)
         {
             if (!ModelState.IsValid)
@@ -30,51 +30,39 @@ namespace Messenger.Web.Controllers
             try
             {
                 var resp = await _userService.LoginAsync(request);
-                var userId = resp.UserId.ToString();
-
-                var claims = new List<Claim> {
-                    new Claim(ClaimTypes.NameIdentifier, userId),
+                var uid = resp.UserId.ToString();
+                var claims = new[]
+                {
+                    new Claim(ClaimTypes.NameIdentifier, uid),
                     new Claim(ClaimTypes.Email, request.Email)
                 };
-                var id = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-                var principal = new ClaimsPrincipal(id);
-
                 await HttpContext.SignInAsync(
                     CookieAuthenticationDefaults.AuthenticationScheme,
-                    principal,
-                    new AuthenticationProperties
-                    {
-                        IsPersistent = true,
-                        ExpiresUtc = DateTimeOffset.UtcNow.AddHours(12)
-                    });
-
+                    new ClaimsPrincipal(new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme)),
+                    new AuthenticationProperties { IsPersistent = true, ExpiresUtc = DateTimeOffset.UtcNow.AddHours(12) }
+                );
                 return RedirectToAction("Index", "Chats");
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                ModelState.AddModelError("Password", ex.Message);
+                ModelState.AddModelError(nameof(request.Email), "Wrong password or email");
                 return View(request);
             }
+
         }
 
         [HttpGet]
         public IActionResult Register()
         {
-            if (User.Identity != null && User.Identity.IsAuthenticated)
+            if (User.Identity?.IsAuthenticated == true)
                 return RedirectToAction("Index", "Chats");
-
             return View(new RegisterRequest());
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Register(RegisterRequest request)
         {
-            if (request.Password != request.ConfirmPassword)
-                ModelState.AddModelError("ConfirmPassword", "Passwords do not match.");
-
-            if (await _userService.UserExistsByEmailAsync(request.Email))
-                ModelState.AddModelError("Email", "This email is already registered.");
-
             if (!ModelState.IsValid)
                 return View(request);
 
@@ -91,6 +79,7 @@ namespace Messenger.Web.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Logout()
         {
             await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);

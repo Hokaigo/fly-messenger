@@ -1,9 +1,9 @@
-﻿using Messenger.Application.DTOs.Chats;
+﻿using AutoMapper;
+using Messenger.Application.DTOs.Chats;
+using Messenger.Application.MessageProcessing.interfaces;
 using Messenger.Application.Services.Interfaces;
 using Messenger.Domain.Entities;
-using Messenger.Domain.Enums;
 using Messenger.Domain.Repositories;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 
 namespace Messenger.Application.Services.Implementations
@@ -12,95 +12,71 @@ namespace Messenger.Application.Services.Implementations
     {
         private readonly IMessageRepository _msgRepo;
         private readonly IUserRepository _userRepo;
-        private readonly IWebHostEnvironment _env;
+        private readonly IMapper _mapper;
+        private readonly IMessageHandler _textHandler;
+        private readonly IMessageHandler _fileHandler;
 
-        public MessageService(IMessageRepository msgRepo, IUserRepository userRepo, IWebHostEnvironment env)
+        public MessageService(IMessageRepository msgRepo, IUserRepository userRepo, IMapper mapper, ITextMessageHandler textMessageHandler,
+            IFileMessageHandler fileMessageHandler)
         {
             _msgRepo = msgRepo;
             _userRepo = userRepo;
-            _env = env;
+            _mapper = mapper;
+            _textHandler = textMessageHandler;
+            _fileHandler = fileMessageHandler;
+
+            _fileHandler.SetNext(_textHandler);
         }
 
         public async Task<IEnumerable<MessageDto>> GetMessagesAsync(Guid chatId)
         {
-            var msgs = await _msgRepo.GetMessagesByChatIdAsync(chatId);
-            return msgs.Select(m => ToMessageDto(m));
+            var entities = await _msgRepo.GetMessagesByChatIdAsync(chatId);
+            var dtos = _mapper.Map<IEnumerable<MessageDto>>(entities);
+            foreach (var d in dtos)
+            {
+                var u = await _userRepo.GetByIdAsync(d.UserId);
+                d.UserName = u?.UserName ?? "Unknown"; 
+            }
+            return dtos;
         }
 
         public async Task<MessageDto> SendMessageAsync(Guid chatId, Guid userId, string? text, IFormFile? file)
         {
-            var msg = new Message
-            {
-                ChatId = chatId,
-                UserId = userId,
-                DateSent = DateTime.UtcNow,
-                Type = MessageType.Text,
-                Text = (text ?? string.Empty).Trim()
-            };
+            var dto = await _fileHandler.ProcessAsync(chatId, userId, text, file);
 
-            if (file is { Length: > 0 })
-            {
-                var uploadFolder = Path.Combine(_env.WebRootPath, "uploads");
-                Directory.CreateDirectory(uploadFolder);
+            var user = await _userRepo.GetByIdAsync(userId);
+            dto.UserName = user?.UserName ?? "Unknown"; 
 
-                var uniqueName = $"{Guid.NewGuid()}{Path.GetExtension(file.FileName)}";
-                var physicalPath = Path.Combine(uploadFolder, uniqueName);
-                await using var stream = File.Create(physicalPath);
-                await file.CopyToAsync(stream);
+            var entity = _mapper.Map<Message>(dto);
+            await _msgRepo.AddAsync(entity);
 
-                msg.Type = MessageType.File;
-                msg.FileUrl = $"/uploads/{uniqueName}";
-                msg.FileName = file.FileName;
-                msg.FileType = file.ContentType;
-                msg.FileSize = file.Length;
-            }
+            dto.UserName = user?.UserName ?? "Unknown";
 
-            await _msgRepo.AddAsync(msg);
-            return await BuildDtoAsync(msg);
+
+            dto.Id = entity.Id;
+            return dto;
         }
-
 
         public async Task<MessageDto> EditMessageAsync(Guid messageId, string newText)
         {
-            var msg = await _msgRepo.GetByIdAsync(messageId)
-                      ?? throw new KeyNotFoundException("Message is not found");
+            var entity = await _msgRepo.GetByIdAsync(messageId) ?? throw new KeyNotFoundException("Message not found");
 
-            msg.Text = newText.Trim();
-            await _msgRepo.UpdateAsync(msg);
-            return await BuildDtoAsync(msg);
+            entity.Text = newText.Trim();
+            await _msgRepo.UpdateAsync(entity);
+
+            var dto = _mapper.Map<MessageDto>(entity);
+            var u = await _userRepo.GetByIdAsync(entity.UserId);
+            dto.UserName = u?.UserName ?? "Unknown"; 
+            return dto;
         }
 
         public async Task<Guid> DeleteMessageAsync(Guid messageId)
         {
-            var msg = await _msgRepo.GetByIdAsync(messageId) ?? throw new KeyNotFoundException("Message is not found");
-            var chatId = msg.ChatId;
+            var entity = await _msgRepo.GetByIdAsync(messageId) ?? throw new KeyNotFoundException("Message not found");
 
+            var chatId = entity.ChatId;
             await _msgRepo.DeleteAsync(messageId);
             return chatId;
-        }
-
-
-        private static MessageDto ToMessageDto(Message m) => new()
-        {
-            Id = m.Id,
-            ChatId = m.ChatId,
-            UserId = m.UserId,
-            UserName = m.User.UserName,
-            DateSent = m.DateSent,
-            Type = m.Type,
-            Text = m.Text,
-            FileUrl = m.FileUrl,
-            FileName = m.FileName,
-            FileType = m.FileType,
-            FileSize = m.FileSize
-        };
-
-        private async Task<MessageDto> BuildDtoAsync(Message m)
-        {
-            var user = await _userRepo.GetByIdAsync(m.UserId);
-            var dto = ToMessageDto(m);
-            dto.UserName = user?.UserName ?? "Unknown User";
-            return dto;
         }
     }
 }

@@ -17,10 +17,9 @@ namespace Messenger.Application.Services.Implementations
         public async Task<LoginResponse> LoginAsync(LoginRequest request)
         {
             var user = await _repo.GetByEmailAsync(request.Email);
-            bool success = user != null && VerifyPassword(request.Password, user.PasswordHash);
-            if (!success)
+            if (user == null || !VerifyPassword(request.Password, user.PasswordHash))
                 throw new Exception("Invalid email or password.");
-            return new LoginResponse { UserId = user!.Id };
+            return new LoginResponse { UserId = user.Id };
         }
 
         public async Task<RegisterResponse> RegisterAsync(RegisterRequest req)
@@ -28,8 +27,7 @@ namespace Messenger.Application.Services.Implementations
             if (req.Password != req.ConfirmPassword)
                 throw new Exception("Passwords don't match.");
 
-            var exists = await _repo.GetByEmailAsync(req.Email);
-            if (exists != null)
+            if (await _repo.GetByEmailAsync(req.Email) != null)
                 throw new Exception("User already exists.");
 
             var hash = HashPassword(req.Password);
@@ -43,6 +41,15 @@ namespace Messenger.Application.Services.Implementations
             return new RegisterResponse { UserId = u.Id };
         }
 
+        public async Task<bool> UserExistsByEmailAsync(string email) => await _repo.GetByEmailAsync(email) != null;
+
+        public async Task<UserDto?> GetByIdAsync(Guid userId)
+        {
+            var u = await _repo.GetByIdAsync(userId);
+            if (u == null) return null;
+            return new UserDto { Id = u.Id, UserName = u.UserName, Email = u.Email };
+        }
+
         private string HashPassword(string pwd)
         {
             using var sha = SHA256.Create();
@@ -50,24 +57,5 @@ namespace Messenger.Application.Services.Implementations
         }
 
         private bool VerifyPassword(string pwd, string stored) => HashPassword(pwd) == stored;
-
-        public async Task<bool> UserExistsByEmailAsync(string email)
-        {
-            var user = await _repo.GetByEmailAsync(email);
-            return user != null;
-        }
-
-        public async Task<UserDto?> GetByIdAsync(Guid userId)
-        {
-            var user = await _repo.GetByIdAsync(userId); 
-            if (user == null) return null;
-
-            return new UserDto
-            {
-                Id = user.Id,
-                UserName = user.UserName,
-                Email = user.Email
-            };
-        }
     }
 }

@@ -1,8 +1,8 @@
-﻿using Messenger.Application.DTOs.Profile;
+﻿using AutoMapper;
+using Messenger.Application.DTOs.Profile;
 using Messenger.Application.Services.Interfaces;
 using Messenger.Domain.Entities;
 using Messenger.Domain.Repositories;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 
 namespace Messenger.Application.Services.Implementations
@@ -11,13 +11,15 @@ namespace Messenger.Application.Services.Implementations
     {
         private readonly IUserProfileRepository _profileRepo;
         private readonly IUserRepository _userRepo;
-        private readonly IWebHostEnvironment _env;
+        private readonly IFileStorageService _storage;
+        private readonly IMapper _mapper;
 
-        public ProfileService(IUserProfileRepository profileRepo, IUserRepository userRepo, IWebHostEnvironment env)
+        public ProfileService(IUserProfileRepository profileRepo, IUserRepository userRepo, IFileStorageService storage, IMapper mapper)
         {
             _profileRepo = profileRepo;
             _userRepo = userRepo;
-            _env = env;
+            _storage = storage;
+            _mapper = mapper;
         }
 
         public async Task<UserProfileDto?> GetByUserIdAsync(Guid userId)
@@ -26,49 +28,26 @@ namespace Messenger.Application.Services.Implementations
             if (user == null) return null;
 
             var profile = user.Profile ?? new UserProfile { UserId = userId };
-
-            return new UserProfileDto
-            {
-                UserId = user.Id,
-                UserName = user.UserName,
-                FirstName = profile.FirstName,
-                LastName = profile.LastName,
-                Bio = profile.Bio,
-                ProfilePicUrl = profile.ProfilePicUrl
-            };
+            var dto = _mapper.Map<UserProfileDto>(profile);
+            dto.UserName = user.UserName;
+            dto.IsOnline = false; 
+            return dto;
         }
 
         public async Task UpdateAsync(Guid userId, UpdateProfileRequest request, IFormFile? avatarFile)
         {
             var existing = await _profileRepo.GetByUserIdAsync(userId);
-            bool isNew = existing == null;
-            var profile = isNew
-                ? new UserProfile { UserId = userId }
-                : existing!;
+            var profile = existing ?? new UserProfile { UserId = userId };
 
-            if (!string.IsNullOrWhiteSpace(request.FirstName))
-                profile.FirstName = request.FirstName!;
-            if (!string.IsNullOrWhiteSpace(request.LastName))
-                profile.LastName = request.LastName!;
-            if (!string.IsNullOrWhiteSpace(request.Bio))
-                profile.Bio = request.Bio!;
+            _mapper.Map(request, profile);
 
             if (avatarFile != null && avatarFile.Length > 0)
             {
-                var uploads = Path.Combine(_env.WebRootPath, "uploads", "avatars");
-                Directory.CreateDirectory(uploads);
-
-                var ext = Path.GetExtension(avatarFile.FileName);
-                var fileName = $"{userId}{ext}";
-                var filePath = Path.Combine(uploads, fileName);
-
-                using var stream = new FileStream(filePath, FileMode.Create);
-                await avatarFile.CopyToAsync(stream);
-
-                profile.ProfilePicUrl = $"/uploads/avatars/{fileName}";
+                var saved = await _storage.SaveAsync(avatarFile.OpenReadStream(), $"{userId}{Path.GetExtension(avatarFile.FileName)}", "uploads/avatars");
+                profile.ProfilePicUrl = saved;
             }
 
-            if (isNew)
+            if (existing == null)
                 await _profileRepo.AddAsync(profile);
             else
                 await _profileRepo.UpdateAsync(profile);
@@ -77,7 +56,7 @@ namespace Messenger.Application.Services.Implementations
         public async Task DeleteAccountAsync(Guid userId)
         {
             await _profileRepo.DeleteByUserIdAsync(userId);
-            await _userRepo.DeleteAsync(userId); 
+            await _userRepo.DeleteAsync(userId);
         }
     }
 }

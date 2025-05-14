@@ -2,7 +2,6 @@
 using Messenger.Application.DTOs.Chats;
 using Messenger.Application.Services.Factories;
 using Messenger.Application.Services.Interfaces;
-using Messenger.Domain.Entities;
 using Messenger.Domain.Repositories;
 
 namespace Messenger.Application.Services.Implementations
@@ -71,9 +70,7 @@ namespace Messenger.Application.Services.Implementations
                 };
 
                 var messages = await _messageRepo.GetMessagesByChatIdAsync(chat.Id);
-                var lastMessage = messages
-                    .OrderByDescending(m => m.DateSent)
-                    .FirstOrDefault();
+                var lastMessage = messages.OrderByDescending(m => m.DateSent).FirstOrDefault();
 
                 if (lastMessage != null)
                 {
@@ -84,9 +81,7 @@ namespace Messenger.Application.Services.Implementations
                 dtos.Add(dto);
             }
 
-            return dtos
-               .OrderByDescending(d => d.LastMessageTime ?? DateTime.MinValue)
-               .ToList();
+            return dtos.OrderByDescending(d => d.LastMessageTime ?? DateTime.MinValue).ToList();
         }
 
         public async Task<ChatSummaryDto?> GetChatSummaryAsync(Guid chatId, Guid userId)

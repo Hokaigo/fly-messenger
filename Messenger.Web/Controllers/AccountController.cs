@@ -43,11 +43,12 @@ namespace Messenger.Web.Controllers
                 );
                 return RedirectToAction("Index", "Chats");
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                ModelState.AddModelError(string.Empty, ex.Message);
+                ModelState.AddModelError(nameof(request.Email), "Wrong password or email");
                 return View(request);
             }
+
         }
 
         [HttpGet]

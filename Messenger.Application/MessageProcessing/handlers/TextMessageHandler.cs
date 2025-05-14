@@ -1,29 +1,50 @@
 ﻿using Messenger.Application.DTOs.Chats;
 using Messenger.Application.MessageProcessing.interfaces;
 using Messenger.Application.MessageProcessing.validation;
-using Messenger.Application.Services.Interfaces;
 using Microsoft.AspNetCore.Http;
+using Messenger.Domain.Enums;
+using Messenger.Domain.Repositories;
 
 namespace Messenger.Application.MessageProcessing.handlers
 {
     public class TextMessageHandler : MessageHandlerTemplate, ITextMessageHandler
     {
-        private readonly IMessageService _msgService;
+        private readonly IEnumerable<IMessageValidator> _validators;
+        private readonly IUserRepository _userRepo;
 
-        public TextMessageHandler(IMessageService msgService) => _msgService = msgService;
-
-        protected override Task ValidateAsyncOrThrow(string? text, IFormFile? file)
+        public TextMessageHandler(IEnumerable<IMessageValidator> validators, IUserRepository userRepo)
         {
-            if (string.IsNullOrWhiteSpace(text))
-                throw new InvalidMessageException("Text message cannot be empty.");
-
-            return Task.CompletedTask;
+            _validators = validators;
+            _userRepo = userRepo;
         }
 
+        protected override async Task ValidateAsync(string? text, IFormFile? file)
+        {
+            foreach (var v in _validators)
+                await v.ValidateAsync(text);
 
-        protected override Task<MessageDto> CreateMessageAsync(Guid chatId, Guid senderId, string? text, IFormFile? file)
-            => _msgService.SendMessageAsync(chatId, senderId, text!, null);
+            if (string.IsNullOrWhiteSpace(text))
+                throw new InvalidMessageException("Text message cannot be empty.");
+        }
 
-        protected override Task SaveMessageAsync(MessageDto message) => Task.CompletedTask;
+        protected override async Task<MessageDto> CreateMessageAsync(Guid chatId, Guid senderId, string? text, IFormFile? file)
+        {
+            var user = await _userRepo.GetByIdAsync(senderId);
+            var userName = user?.UserName ?? "Unknown"; 
+
+            var dto = new MessageDto
+            {
+                Id = Guid.NewGuid(),
+                ChatId = chatId,
+                UserId = senderId,
+                UserName = userName,
+                DateSent = DateTime.UtcNow,
+                Type = MessageType.Text,
+                Text = text!.Trim()
+            };
+
+            return dto;
+        }
+
     }
 }

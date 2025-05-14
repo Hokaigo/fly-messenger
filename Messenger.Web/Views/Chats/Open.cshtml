@@ -114,13 +114,8 @@
 
     <div id="clientError" class="alert alert-danger d-none mx-3 mt-2"></div>
 
-    <form id="messageForm"
-          class="chat-form"
-          asp-controller="Chats"
-          asp-action="SendMessage"
-          asp-route-chatId="@Model.Id"
-          method="post"
-          enctype="multipart/form-data">
+    <form id="messageForm" class="chat-form" asp-controller="Chats" asp-action="SendMessage" asp-route-chatId="@Model.Id" method="post" 
+    enctype="multipart/form-data">
         @Html.AntiForgeryToken()
 
         <input type="hidden" id="chatId" name="chatId" value="@Model.Id" />

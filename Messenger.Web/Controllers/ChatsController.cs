@@ -107,12 +107,11 @@ namespace Messenger.Web.Controllers
             if (chatId == Guid.Empty)
                 return BadRequest(new { error = "An error occurred while sending a message." });
 
-            IMessageHandler handler = (file != null && file.Length > 0) ? _fileHandler : _textHandler;
-
-            MessageDto dto;
             try
             {
-                dto = await handler.ProcessAsync(chatId, GetUserId(), text, file);
+                var dto = await _msgService.SendMessageAsync(chatId, GetUserId(), text, file);
+                await BroadcastMessage(dto, chatId);
+                return Ok();
             }
             catch (InvalidMessageException mex)
             {
@@ -122,10 +121,8 @@ namespace Messenger.Web.Controllers
             {
                 return StatusCode(500, new { error = "Server error occurred" });
             }
-
-            await BroadcastMessage(dto, chatId);
-            return Ok();
         }
+
 
 
         [HttpPost, ValidateAntiForgeryToken]

@@ -16,7 +16,13 @@ namespace Messenger.Application.Mappings
             CreateMap<Chat, ChatSummaryDto>().ForMember(d => d.ChatId, o => o.MapFrom(s => s.Id)).ForMember(d => d.OtherUserName, o => o.Ignore())
                 .ForMember(d => d.LastMessage, o => o.Ignore()).ForMember(d => d.LastMessageTime, o => o.Ignore());
 
-            CreateMap<Message, MessageDto>();
+            CreateMap<Message, MessageDto>().ForMember(d => d.UserName, o => o.MapFrom(s => s.User.UserName));
+
+            CreateMap<MessageDto, Message>().ForMember(d => d.Id, o => o.Ignore()).ForMember(d => d.DateSent, o => o.MapFrom(s => s.DateSent))
+                .ForMember(d => d.ChatId, o => o.MapFrom(s => s.ChatId)).ForMember(d => d.UserId, o => o.MapFrom(s => s.UserId))
+                .ForMember(d => d.Text, o => o.MapFrom(s => s.Text)).ForMember(d => d.Type, o => o.MapFrom(s => s.Type))
+                .ForMember(d => d.FileUrl, o => o.MapFrom(s => s.FileUrl)).ForMember(d => d.FileName, o => o.MapFrom(s => s.FileName))
+                .ForMember(d => d.FileType, o => o.MapFrom(s => s.FileType)).ForMember(d => d.FileSize, o => o.MapFrom(s => s.FileSize));
 
             CreateMap<SendMessageDto, Message>().ForMember(d => d.ChatId, o => o.MapFrom(s => s.ChatId))
                 .ForMember(d => d.Text, o => o.MapFrom(s => (s.Text ?? "").Trim())).ForMember(d => d.DateSent, o => o.MapFrom(_ => DateTime.UtcNow))

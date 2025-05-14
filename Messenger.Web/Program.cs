@@ -1,6 +1,8 @@
 using Messenger.Application.Mappings;
 using Messenger.Application.MessageProcessing.handlers;
 using Messenger.Application.MessageProcessing.interfaces;
+using Messenger.Application.MessageProcessing.validation;
+using Messenger.Application.MessageProcessing.validation.validators;
 using Messenger.Application.Services.Factories;
 using Messenger.Application.Services.Implementations;
 using Messenger.Application.Services.Interfaces;
@@ -22,29 +24,32 @@ builder.WebHost.ConfigureKestrel(options =>
     options.Limits.MaxRequestBodySize = 15 * 1024 * 1024;
 });
 
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddSignalR();
 
-builder.Services.AddTransient<ITextMessageHandler, TextMessageHandler>();
-builder.Services.AddTransient<IFileMessageHandler, FileMessageHandler>();
+builder.Services.AddScoped<IMessageValidator, LengthValidator>();
+builder.Services.AddScoped<IMessageValidator, ProfanityValidator>();
+builder.Services.AddScoped<IMessageValidator, SpamValidator>();
 
-builder.Services.AddScoped<IChatFactory, ChatFactory>();
+builder.Services.AddScoped<ITextMessageHandler, TextMessageHandler>();
+builder.Services.AddScoped<IFileMessageHandler, FileMessageHandler>();
+
+builder.Services.AddScoped<IFileStorageService, FileStorageService>();
 
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IChatRepository, ChatRepository>();
 builder.Services.AddScoped<IMessageRepository, MessageRepository>();
 builder.Services.AddScoped<IUserProfileRepository, UserProfileRepository>();
-builder.Services.AddScoped<IMessageService, MessageService>();
+
+builder.Services.AddScoped<IChatFactory, ChatFactory>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IChatService, ChatService>();
 builder.Services.AddScoped<IProfileService, ProfileService>();
-builder.Services.AddScoped<IFileStorageService, FileStorageService>();
+
+builder.Services.AddScoped<IMessageService, MessageService>();
 
 builder.Services.AddSingleton<IOnlineUserTracker, OnlineUserTracker>();
-
-
 
 builder.Services
     .AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
@@ -57,11 +62,9 @@ builder.Services
         options.Cookie.SameSite = SameSiteMode.Lax;
         options.ExpireTimeSpan = TimeSpan.FromHours(12);
     });
-
 builder.Services.AddAuthorization();
+
 builder.Services.AddControllersWithViews();
-
-
 
 var app = builder.Build();
 
@@ -82,7 +85,6 @@ app.Use(async (ctx, next) =>
 });
 
 app.UseStaticFiles();
-
 app.UseHttpsRedirection();
 app.UseRouting();
 
@@ -96,6 +98,6 @@ app.MapControllerRoute(
 app.MapHub<ChatHub>("/hubs/chat");
 app.MapHub<ChatListHub>("/hubs/chatList");
 app.MapHub<ProfileHub>("/hubs/profile");
-app.MapHub<UserStateHub>("/hubs/userState").RequireAuthorization();
+app.MapHub<UserStateHub>("/hubs/userState");
 
 app.Run();

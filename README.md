@@ -135,3 +135,19 @@
 * **Encapsulate Field**: Use properties to maintain invariants instead of public fields.
 * **Introduce Parameter Object**: Group related parameters into DTOs for cleaner method signatures.
 * **Remove Dead Code**: Prune unused methods and commented-out fragments after refactoring.
+
+### Demo preview
+![Project Demo](images/proj_demo_1.png)
+![Project Demo](images/proj_demo_2.png)
+![Project Demo](images/proj_demo_3.png)
+![Project Demo](images/proj_demo_4.png)
+![Project Demo](images/proj_demo_5.png)
+![Project Demo](images/proj_demo_6.png)
+![Project Demo](images/proj_demo_7.png)
+![Project Demo](images/proj_demo_8.png)
+![Project Demo](images/proj_demo_9.png)
+
+### Project rows count
+![Rows Count 1](images/rows_count_1.png)
+![Rows Count 2](images/rows_count_2.png)
+

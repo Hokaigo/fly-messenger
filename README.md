@@ -40,6 +40,7 @@
    ```bash
    dotnet restore
    npm install
+   dotnet libman restore # Alternatively in VS, find libman.json, and restore it with right button click
    ```
 
    *Tip: If you don’t have .NET installed, download it from [https://dotnet.microsoft.com/download](https://dotnet.microsoft.com/download), then verify with `dotnet --version`.*

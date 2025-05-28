@@ -2,18 +2,16 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Messenger.Application.DTOs.Chats;
+using Messenger.Application.Services.Interfaces;
 using Messenger.Domain.Repositories;
 
 namespace Messenger.Application.Services.Implementations
 {
-    public class LastMessageService
+    public class LastMessageService : ILastMessageService
     {
         private readonly IMessageRepository _messageRepo;
 
-        public LastMessageService(IMessageRepository messageRepo)
-        {
-            _messageRepo = messageRepo;
-        }
+        public LastMessageService(IMessageRepository messageRepo) => _messageRepo = messageRepo;
 
         public async Task<LastMessageInfoDto?> GetLastMessageInfoAsync(Guid chatId)
         {
@@ -29,11 +27,5 @@ namespace Messenger.Application.Services.Implementations
                 DateSent = lastMessage.DateSent
             };
         }
-    }
-
-    public class LastMessageInfoDto
-    {
-        public string Text { get; set; }
-        public DateTime DateSent { get; set; }
     }
 } 

@@ -2,6 +2,7 @@
 using Messenger.Application.DTOs.Chats;
 using Messenger.Application.Services.Factories;
 using Messenger.Application.Services.Interfaces;
+using Messenger.Domain.Entities;
 using Messenger.Domain.Repositories;
 
 namespace Messenger.Application.Services.Implementations
@@ -13,15 +14,10 @@ namespace Messenger.Application.Services.Implementations
         private readonly IMessageRepository _messageRepo;
         private readonly IMapper _mapper;
         private readonly IChatFactory _chatFactory;
-        private readonly LastMessageService _lastMessageService;
+        private readonly ILastMessageService _lastMessageService;
 
-        public ChatService(
-            IChatRepository chatRepo,
-            IUserRepository userRepo,
-            IMessageRepository messageRepo,
-            IMapper mapper,
-            IChatFactory chatFactory,
-            LastMessageService lastMessageService)
+        public ChatService(IChatRepository chatRepo,IUserRepository userRepo,IMessageRepository messageRepo,IMapper mapper,IChatFactory chatFactory,
+            ILastMessageService lastMessageService)
         {
             _chatRepo = chatRepo;
             _userRepo = userRepo;
